@@ -1,0 +1,31 @@
+# Terraform
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+tfplan
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+# Lock files are committed for root modules only; reusable modules float within their constraints.
+**/modules/**/.terraform.lock.hcl
+
+# Credentials — never commit
+*.json.key
+sa-key.json
+*-key.json
+.env
+.env.*
+
+# Node
+node_modules/
+coverage/
+npm-debug.log*
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
