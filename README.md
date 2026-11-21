@@ -9,7 +9,7 @@ Each task has its own folder with a README covering **what I found, what I chang
 | Task | Folder | Summary |
 |---|---|---|
 | 1 | [`task-1/`](task-1/) | Review a scheduled-function Terraform config, rewrite it as a reusable least-privilege module, and adopt the hand-made production function without recreating it |
-| 2 | _to come_ | |
+| 2 | [`task-2/`](task-2/) | Fix a Scheduler → Pub/Sub → Firestore pipeline that double-books compartments, misses parcels and overlaps runs; idempotent, transactional rewrite with emulator-tested guarantees and a gcloud runbook (DLQ, OIDC, Africa/Nairobi) |
 | 3 | _to come_ | |
 | 4 | _to come_ | |
 | 5 | _to come_ | |
@@ -19,16 +19,25 @@ Each task has its own folder with a README covering **what I found, what I chang
 
 - Terraform ≥ 1.7 (used here: 1.17.2)
 - Node.js ≥ 22 (used here: 22.22.2)
+- Java ≥ 21, only for the Firestore emulator tests in Task 2
 - No GCP account or credentials are needed for the checks below
 
 ## Running the checks
 
 ```bash
+# From the repository root. Each task runs in a subshell so the cds don't leak.
+
 # Task 1
-cd task-1
-terraform fmt -check -recursive
-terraform init -backend=false && terraform validate
-cd modules/scheduled-function && terraform init && terraform test
+( cd task-1 &&
+  terraform fmt -check -recursive &&
+  terraform init -backend=false && terraform validate &&
+  cd modules/scheduled-function && terraform init && terraform test )
+
+# Task 2
+( cd task-2/app &&
+  npm ci &&
+  npm test &&               # unit tests
+  npm run test:emulator )   # Firestore emulator tests (Java 21+)
 ```
 
 ## AI usage

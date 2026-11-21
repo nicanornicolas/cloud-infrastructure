@@ -20,6 +20,11 @@ sa-key.json
 .env
 .env.*
 
+# Firebase emulator logs
+firestore-debug.log
+firebase-debug.log
+*-debug.log
+
 # Node
 node_modules/
 coverage/

@@ -1,0 +1,20 @@
+{
+  "name": "evri-manifest-sync",
+  "version": "1.0.0",
+  "private": true,
+  "description": "syncEvriManifest (HTTP, Cloud Scheduler) and reserveCompartment (Pub/Sub) Cloud Run functions",
+  "main": "index.js",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "test": "node --test \"test/unit/*.test.js\"",
+    "test:emulator": "npx -y firebase-tools@15.37.0 emulators:exec --only firestore --project demo-evri \"node --test --test-concurrency=1 'test/emulator/*.test.js'\"",
+    "test:all": "npm test && npm run test:emulator"
+  },
+  "dependencies": {
+    "@google-cloud/firestore": "^9.4.1",
+    "@google-cloud/functions-framework": "^5.0.5",
+    "@google-cloud/pubsub": "^6.4.1"
+  }
+}
