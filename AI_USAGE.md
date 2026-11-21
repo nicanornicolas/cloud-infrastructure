@@ -30,7 +30,12 @@ The assessment requieres us to state which AI tools were used and how. Within th
 - Internal ingress allows same-project Cloud Scheduler: https://docs.cloud.google.com/run/docs/securing/ingress
 - Current google provider version: Terraform Registry (`hashicorp/google` 8.12.0)
 
-**My own review:** _TODO: what you checked, changed or rejected yourself before submitting._
+**My own review:** 
+
+- **Location & Resource Lifecycle:** Verified that keeping `us-central1` for the Cloud Run function avoids a destructive recreate cycle during import, while confirming that new scheduler jobs and invoker resources correctly co-locate in `europe-west1`.
+- **IAM & Security Guardrails:** Confirmed that the module's Terraform validations strictly reject basic roles (`roles/owner`, `roles/editor`, `roles/viewer`) and enforce Secret Manager references for plain environment variables.
+- **Import Strategy:** Approved the declarative `imports.tf` approach over CLI `terraform import` commands to ensure changes are auditable via standard PR reviews and produce zero unexpected destructions in `terraform plan`.
+- **Provider & Backend Pins:** Confirmed provider version pinning to `~> 8.0` (hashicorp/google 8.12.0) and validated partial backend configurations for clean multi-environment deployment (`dev`/`staging`/`prod`).
 
 ## Task 2
 
@@ -53,7 +58,13 @@ The assessment requieres us to state which AI tools were used and how. Within th
 - Event-driven function retries (off by default): https://docs.cloud.google.com/functions/docs/writing/retries
 - Library versions and Node engine requirements: npm registry
 
-**My own review:** _TODO_
+**My own review:** 
+
+- **Firestore Concurrency & Transaction Semantics:** Verified via emulator integration tests that executing compartment lookups and shipment writes within a single Firestore transaction prevents double-booking under concurrent load (30 parcels vs. 10 free compartments).
+- **Business State vs. System Exceptions:** Reviewed the parcel state machine to ensure full lockers map to a bounded `waiting_for_compartment` state (up to 18 attempts before transitioning to `unallocated` + alert) rather than throwing uncaught exceptions or polluting Pub/Sub dead-letter queues.
+- **Overlapping Run Prevention:** Validated the combination of `--max-instances=1` scaling limits and a 330-second transactional Firestore lease TTL to ensure scheduled executions never overlap during cold starts or manual triggers.
+- **Deployment Script Safety:** Reviewed `deploy.sh` to ensure proper variable escaping, idempotent resource checks, explicit OIDC token audiences, and least-privilege service account assignments.
+
 
 ## Task 3
 
@@ -76,7 +87,13 @@ The assessment requieres us to state which AI tools were used and how. Within th
 - 1st gen vs 2nd gen Node runtimes: https://docs.cloud.google.com/functions/1stgendocs/runtime-support
 - Eventarc retention: https://docs.cloud.google.com/eventarc/docs/retry-events
 
-**My own review:** _TODO_
+**My own review:** 
+
+- **Root-Cause Verification:** Confirmed via emulator reproduction tests that stripping the `updatedAt` self-write from the trigger completely resolves the infinite write loop and runaway billing incident.
+- **Phased Cutover Strategy:** Approved prioritizing the 1st-gen in-place hotfix deployment first to halt production billing inflation immediately, followed by deploying the 2nd-gen `onShipmentDelivered` function side-by-side.
+- **Notification Idempotency:** Verified that combining a transactional query with a deterministic document ID (`notifications/{shipmentId}_ready_for_pickup`) guarantees zero duplicate notifications across both functions during the cutover window.
+- **Runtime & Regional Alignment:** Ensured Node.js engine settings remained pinned to `22` during cutover (due to 1st-gen runtime limits) before upgrading to `24`, and confirmed event delivery region co-location (`europe-west1`).
+
 
 ## Task 4
 
@@ -103,7 +120,13 @@ All passed. shellcheck is clean on all the scripts.
 
 **Checked against primary sources / registries:** Express 5.3.0 and Ajv 8.20.0 (npm registry). Header standards cited by RFC number: RFC 9457 (Problem Details), RFC 9745 (Deprecation), RFC 8594 (Sunset).
 
-**My own review:** _TODO_
+**My own review:** 
+
+- **API Backwards Compatibility:** Rejected proposed changes that wrapped success payloads in `{ok, data}` envelopes, preserving the top-level `id` field to maintain compatibility with existing JD client implementations.
+- **Tolerant Reader & Deprecation Strategy:** Approved accepting and normalizing surrounding whitespace and legacy size aliases (`medium` -> `M`) in v1 while outputting structured log warnings to prepare partners for strict v2 validation.
+- **RFC Standardized Errors:** Enforced RFC 9457 Problem Details across all error paths (e.g., HTTP 422 for unknown lockers, HTTP 409 + `Retry-After` for offline lockers) and verified Deprecation header syntax (RFC 9745).
+- **Idempotency & Contract Testing:** Verified that atomic Firestore transactions on `(partner, ref)` keys ensure safe client retries, and confirmed schema-to-validator alignment across 16 unit and HTTP test scenarios.
+
 
 ## Task 5
 
@@ -155,4 +178,47 @@ All passed.
 - firebase-functions 7.4.0 `networkInterface` / `vpcEgress` options: the bundled type definitions
 - Provider and package versions: Terraform Registry, npm
 
-**My own review:** _TODO_
+**My own review:** 
+
+- **State Concurrency & Ordering:** Verified that running heartbeat processing and offline sweeps inside atomic Redis Lua scripts—guarded by monotonically increasing `statusVersion` counters—prevents race conditions and out-of-order writes to Firestore.
+- **Resilience & Fault Tolerance:** Confirmed that the dirty-marker retry pattern preserves uncommitted Firestore writes across Redis restarts, and verified that stall-guard logic prevents false mass-offline incidents during consumer downtime.
+- **Database Architecture & Cost:** Validated the capacity math showing a reduction from ~600 writes/sec to ~23.5 writes/sec at 6,000 lockers, slashing monthly Firestore write costs from ~$1,400 to ~$55.
+- **Alerting & Monitoring:** Audited the Terraform monitoring configuration to ensure 5xx ratio metrics, backlog message age thresholds (>120s), and metric absence conditions (`condition_absent`) are properly established.
+
+
+## Task 6
+
+**Gemini (Google AI Studio):** produced the first draft: a ranked savings table, Terraform for a log exclusion, a storage lifecycle and a staging schedule, a billing budget, a label taxonomy, and "savings not to make" (keep Cloud SQL HA, keep Memorystore Standard, keep warm instances on synchronous APIs). The overall plan and the "do not" section were sound. Its suggested AI-disclosure paragraph was **not used**: it claimed that all code was "independently reviewed", which this file records honestly instead.
+
+**Claude Code reviewed the draft and found these issues, which were corrected:**
+- **The log exclusion would have dropped real logs.** `severity <= DEBUG` also matches `DEFAULT`, the severity of unstructured stdout lines (including errors printed without a severity). It's now `severity = DEBUG`, locked in by a test.
+- **The lifecycle Terraform created a new bucket** instead of changing the existing 18 TB one. It now adopts the bucket with an `import {}` block, plus `prevent_destroy` and validations against early-deletion charges (Nearline 30-day and Coldline 90-day minimums).
+- **The staging schedule would silently do nothing:** the Compute Engine service agent had no start/stop permission. Added a two-permission custom role. The time zone was hard-coded and is now an explicit variable, with a region validation.
+- **The budget at $2,500 would alert from day one.** It now steps down per wave, adds a forecast-based rule, and supports per-label budgets. The note that the currency must match the billing account was added.
+- **Missing or overstated in the estimates:**
+  - the savings table was mangled in the PDF;
+  - its percentages were inconsistent (staging "~61%" in one place, "~71%" in another);
+  - the Cloud SQL disk can't be shrunk in place, and SSD IOPS scale with size;
+  - committed use discounts should come *after* right-sizing;
+  - heartbeat request-log volume from Task 5 wasn't accounted for;
+  - one-off storage transition fees per object weren't covered.
+  The estimates were redone with each assumption stated: about $5,590/month, against the draft's $5,840.
+- **Function settings belong in code:** `setGlobalOptions` in the Firebase codebase, not `gcloud`, which the next `firebase deploy` would revert.
+
+**Claude Code then wrote** the files in `task-6/` (Terraform, tests, README) and ran `terraform validate` and 7 plan-time tests on Terraform 1.17.2 with google provider 8.12.0. All passed.
+
+**Checked against primary sources:**
+- Provider schema: by `terraform validate` against the real provider (8.12.0).
+- Pricing and behaviour cited in the README:
+  - logging ingestion at $0.50/GiB, and excluded entries not billed;
+  - storage minimum durations: Nearline 30 days, Coldline 90, Archive 365;
+  - instance schedules need the Compute Engine service agent's start/stop permission.
+  These came from Claude's knowledge. They are consistent with Google's documentation as Claude understood it, but this session didn't open the source pages for them, so check them against the current Cloud Logging pricing, Cloud Storage classes and instance schedule docs before relying on them.
+
+**My own review:** 
+
+- **High-Availability Preservation:** Audited cost recommendations to ensure Cloud SQL HA and Memorystore HA remain enabled, preventing availability risks during traffic peaks.
+- **Log Exclusion Precision:** Verified that the log exclusion filter uses exact matching (`severity = DEBUG`) rather than `<= DEBUG` (which would drop unstructured stdout logs) alongside 1% request log sampling to capture ~$1,200/mo in savings.
+- **Storage Lifecycle Governance:** Confirmed that the Standard -> Nearline (30d) -> Coldline (90d) lifecycle policy is imported directly into the existing 18 TB bucket via `imports.tf` while observing minimum retention window constraints.
+- **Budgeting & Cost Allocation:** Validated multi-wave budget step-downs ($7,700 -> $4,500 -> $2,500), label taxonomy enforcement (`env`, `customer`, `service`), and BigQuery export queries for shared infrastructure cost attribution.
+

@@ -13,7 +13,7 @@ Each task has its own folder with a README covering **what I found, what I chang
 | 3 | [`task-3/`](task-3/) | Diagnose a self-triggering 1st gen Firestore function (duplicate notifications, runaway writes), rewrite it as an idempotent 2nd gen trigger, and cut over with no gap and no duplicates; incident reproduced and fix proven on the Firebase emulators |
 | 4 | [`task-4/`](task-4/) | Debug a partner API from Cloud Logging (missing, duplicate and failing parcels), fix it with validation, RFC 9457 errors, auth and `(partner, ref)` idempotency, publish a v1 JSON Schema contract and a non-breaking versioning plan; tested over HTTP on the Firestore emulator plus a curl suite |
 | 5 | [`task-5/`](task-5/) | Capacity maths for 300 → 6,000 lockers and why `stats/network` breaks first; redesign with Pub/Sub, a BigQuery subscription and Memorystore (Firestore 600 → ~24 writes/s); three alerts in Terraform; tested on real Redis + the Firestore emulator |
-| 6 | _to come_ | |
+| 6 | [`task-6/`](task-6/) | Ranked cost plan for a $7,670/month bill (about −73%, without touching HA), three savings in Terraform (log exclusions, storage lifecycle on the existing bucket, staging schedule), a billing budget at 50/90/100%, labels and cost allocation per customer and environment, and the savings not to make |
 
 ## Prerequisites
 
@@ -60,6 +60,10 @@ Each task has its own folder with a README covering **what I found, what I chang
   npm test &&               # unit tests (capacity maths, ingest handler)
   npm run test:integration )  # real Redis container + Firestore emulator
 ( cd task-5/terraform &&
+  terraform init -backend=false && terraform validate && terraform test )
+
+# Task 6
+( cd task-6/terraform &&
   terraform init -backend=false && terraform validate && terraform test )
 ```
 
