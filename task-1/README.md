@@ -2,7 +2,7 @@
 
 A colleague's Terraform deploys a Cloud Run function (2nd gen) that sends parcel pick-up reminder SMS, triggered by Cloud Scheduler every 15 minutes. It works, but it was never reviewed and is about to become the template for every new scheduled job. Anything wrong with it would be copied into every job built from it.
 
-**Scope and constraints:** a 30-minute timebox and no live GCP project. Everything below can be checked offline (`fmt`, `validate`, and `terraform test` with a mocked provider; see [Verification](#verification)). Commands that need a real project (`plan`, `import`, `gcloud`) are written as a runbook and are clearly marked as **not executed**.
+**Scope and constraints:** I am working within a 30-minute timebox with no live GCP project. Thus everything below can be checked offline (`fmt`, `validate`, and `terraform test` with a mocked provider; take a look at [Verification](#verification)). Commands that need a real project (`plan`, `import`, `gcloud`) have been written separately as a runbook and are clearly marked as **not executed**.
 
 ```text
 task-1/
