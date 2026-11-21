@@ -1,0 +1,14 @@
+{
+  "name": "shipment-notifications-original",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Original 1st gen function, kept only to reproduce the bug in the emulator",
+  "main": "index.js",
+  "engines": {
+    "node": "22"
+  },
+  "dependencies": {
+    "firebase-admin": "^12.7.0",
+    "firebase-functions": "^5.1.1"
+  }
+}
