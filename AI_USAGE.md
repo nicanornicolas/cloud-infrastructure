@@ -54,3 +54,26 @@ The assessment requieres us to state which AI tools were used and how. Within th
 - Library versions and Node engine requirements: npm registry
 
 **My own review:** _TODO_
+
+## Task 3
+
+**Gemini (Google AI Studio):** produced the first draft: the step-by-step incident trace (self-triggering `updatedAt` write, including the write outside the `if`), a 2nd gen function using a deterministic notification ID with `create()`, and a side-by-side cutover plan. The core diagnosis and approach were sound.
+
+**Claude Code reviewed the draft and found these issues, which were corrected:**
+- **The cutover would fail to deploy, unnoticed.** 1st gen has no Node.js 24 runtime. The 1st gen hotfix and the 2nd gen function share a codebase, so `engines.node` must stay `"22"` during the cutover, and is moved to 24 in a final step. The draft didn't address this.
+- **Duplicates across the cutover boundary.** `create()` on the deterministic ID doesn't see notifications the *old* code already created with random IDs. The create is now transactional, with a query for any existing notification for that shipment and type.
+- **Wrong claim:** "`retry: true` retries for up to 7 days". Eventarc's default retention is 24 hours.
+- **Outdated packages:** `firebase-functions` ^6 and `firebase-admin` ^13 were updated to the current 7.4.0 and 14.5.1. The original code only runs on firebase-functions ≤ 5.x (from v6 the root export is the 2nd gen API), which is now stated.
+- **Cutover order:** the draft deployed the hotfix and the 2nd gen function together. They're now separate steps: the hotfix first, because it is the urgent incident fix and is independent of the migration. Verification commands are given before deleting the 1st gen function, plus a runtime upgrade step and a rollback path.
+- The "V2" name suffix was dropped: `onShipmentDelivered` stays as the permanent name.
+
+**Claude Code then wrote** the files in `task-3/`: a shared idempotent notification module, the 2nd gen function plus the 1st gen hotfix, unit tests, emulator end-to-end tests and the README. It ran everything on the Firebase emulators (9/9 passing). The tests show:
+- the original function produces over 100 notifications from one update;
+- with both functions running, each transition produces exactly one notification: the 1st gen created 21, and the 2nd gen deduplicated 21.
+
+**Checked against primary sources:**
+- Upgrade path (rename, run side by side, delete 1st gen last): firebase-functions 7.4.0 bundled guide `.guides/upgrade.md`
+- 1st gen vs 2nd gen Node runtimes: https://docs.cloud.google.com/functions/1stgendocs/runtime-support
+- Eventarc retention: https://docs.cloud.google.com/eventarc/docs/retry-events
+
+**My own review:** _TODO_

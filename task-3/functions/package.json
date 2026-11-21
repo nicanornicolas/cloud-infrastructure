@@ -1,0 +1,19 @@
+{
+  "name": "shipment-notifications",
+  "version": "1.0.0",
+  "private": true,
+  "description": "2nd gen Firestore trigger: exactly one ready_for_pickup notification per delivered shipment",
+  "main": "index.js",
+  "scripts": {
+    "test": "node --test \"test/unit/*.test.js\"",
+    "test:emulator": "cd .. && npx -y firebase-tools@15.37.0 emulators:exec --config firebase.json --only functions,firestore --project demo-task3 \"node --test --test-concurrency=1 'functions/test/emulator/*.test.js'\"",
+    "test:repro": "cd ../original && npm install --no-audit --no-fund --silent && cd .. && npx -y firebase-tools@15.37.0 emulators:exec --config firebase.repro.json --only functions,firestore --project demo-task3 \"node --test 'functions/test/repro/*.test.js'\""
+  },
+  "engines": {
+    "node": "22"
+  },
+  "dependencies": {
+    "firebase-admin": "^14.5.1",
+    "firebase-functions": "^7.4.0"
+  }
+}
