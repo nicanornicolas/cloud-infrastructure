@@ -1,0 +1,23 @@
+{
+  "name": "partner-control-api",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Partner parcel intake API (v1): validated, idempotent, consistent errors",
+  "main": "src/server.js",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "start": "node src/server.js",
+    "test": "node --test \"test/unit/*.test.js\" && bash test/logging/test-log-filters.sh",
+    "test:emulator": "npx -y firebase-tools@15.37.0 emulators:exec --only firestore --project demo-task4 \"node --test --test-concurrency=1 'test/emulator/*.test.js' && bash test/curl/run-local.sh\""
+  },
+  "dependencies": {
+    "@google-cloud/firestore": "^9.4.1",
+    "express": "^5.3.0"
+  },
+  "devDependencies": {
+    "ajv": "^8.20.0",
+    "ajv-formats": "^3.0.1"
+  }
+}

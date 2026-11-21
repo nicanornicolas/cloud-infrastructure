@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://api.ktsm.example/schemas/v1/create-parcel.request.json",
+  "title": "CreateParcelRequest (v1)",
+  "description": "Body of POST /v1/partners/{partner}/parcels. Content-Type: application/json. Authentication: X-API-Key header. The (partner, ref) pair is the idempotency key: resending the same request is safe and returns the original parcel. v1 tolerates surrounding whitespace in ref/lockerId, the size aliases small/medium/large, and unknown fields (ignored); all three are deprecated and will be rejected in v2.",
+  "type": "object",
+  "required": ["ref", "lockerId", "size"],
+  "properties": {
+    "ref": {
+      "description": "Partner's own unique parcel reference; also the idempotency key. Surrounding whitespace is trimmed (deprecated).",
+      "type": "string",
+      "pattern": "^\\s*[A-Za-z0-9][A-Za-z0-9._-]{0,63}\\s*$",
+      "examples": ["JD55122"]
+    },
+    "lockerId": {
+      "description": "Target locker ID. Must exist and be online at creation time. Surrounding whitespace is trimmed (deprecated).",
+      "type": "string",
+      "pattern": "^\\s*[A-Za-z0-9][A-Za-z0-9._-]{0,63}\\s*$",
+      "examples": ["LK-2041"]
+    },
+    "size": {
+      "description": "Compartment size. Canonical values S, M, L.",
+      "anyOf": [
+        { "enum": ["S", "M", "L"] },
+        { "enum": ["small", "medium", "large"], "deprecated": true, "description": "Accepted in v1 for compatibility, normalised to S/M/L." }
+      ]
+    }
+  },
+  "additionalProperties": true
+}

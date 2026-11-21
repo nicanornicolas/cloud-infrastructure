@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://api.ktsm.example/schemas/v1/parcel.response.json",
+  "title": "Parcel (v1 success response)",
+  "description": "Returned with 201 Created (new parcel, plus a Location header) and 200 OK (idempotent replay, plus 'Idempotent-Replayed: true'); a replay returns the identical body. `id` stays a top-level field as in the original v1 response, so existing clients keep working. Clients MUST ignore unknown fields: new fields may be added within v1.",
+  "type": "object",
+  "required": ["id", "partner", "ref", "lockerId", "size", "status", "createdAt"],
+  "properties": {
+    "id": { "type": "string", "minLength": 1, "description": "Opaque parcel ID. Do not parse.", "examples": ["p_3f9c2ab41d0e7788"] },
+    "partner": { "type": "string" },
+    "ref": { "type": "string", "description": "The partner's ref, trimmed." },
+    "lockerId": { "type": "string", "description": "The locker ID, trimmed." },
+    "size": { "enum": ["S", "M", "L"], "description": "Always the canonical value, even if an alias was sent." },
+    "status": { "type": "string", "description": "Known values: created. Clients MUST tolerate new values." },
+    "createdAt": { "type": "string", "format": "date-time" }
+  },
+  "additionalProperties": true
+}

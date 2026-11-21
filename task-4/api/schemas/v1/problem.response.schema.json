@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://api.ktsm.example/schemas/v1/problem.response.json",
+  "title": "Problem (v1 error response)",
+  "description": "Every non-2xx response: RFC 9457 Problem Details, Content-Type application/problem+json. Branch on `code` (stable), not on `title`/`detail` (human text). `retryable: true` means the SAME request may be resent later, which is safe because creation is idempotent. Known codes and statuses: INVALID_JSON 400, VALIDATION_FAILED 400, UNAUTHENTICATED 401, FORBIDDEN 403, NOT_FOUND 404, PARCEL_REF_CONFLICT 409, LOCKER_OFFLINE 409 (retryable, Retry-After), PAYLOAD_TOO_LARGE 413, UNSUPPORTED_MEDIA_TYPE 415, LOCKER_NOT_FOUND 422, INTERNAL 500 (retryable), UNAVAILABLE 503 (retryable, Retry-After). New codes may be added within v1; treat unknown codes by their HTTP status.",
+  "type": "object",
+  "required": ["type", "title", "status", "code", "retryable", "requestId"],
+  "properties": {
+    "type": { "type": "string", "format": "uri" },
+    "title": { "type": "string" },
+    "status": { "type": "integer", "minimum": 400, "maximum": 599 },
+    "detail": { "type": "string" },
+    "code": { "type": "string", "pattern": "^[A-Z][A-Z_]*$" },
+    "retryable": { "type": "boolean" },
+    "errors": {
+      "description": "Field-level problems (VALIDATION_FAILED, LOCKER_NOT_FOUND).",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["field", "message"],
+        "properties": { "field": { "type": "string" }, "message": { "type": "string" } }
+      }
+    },
+    "requestId": { "type": "string", "description": "Quote this when contacting support; also returned as the X-Request-Id header." }
+  },
+  "additionalProperties": true
+}

@@ -77,3 +77,30 @@ The assessment requieres us to state which AI tools were used and how. Within th
 - Eventarc retention: https://docs.cloud.google.com/eventarc/docs/retry-events
 
 **My own review:** _TODO_
+
+## Task 4
+
+**Gemini (Google AI Studio):** produced the first draft: the log-line analysis (trailing space → 500, offline → 200 `ok:false`, duplicate `JD55122`), a `gcloud logging read` filter plus a duplicate-ref pipeline, a fixed Express handler with transactional `(partner, ref)` idempotency, JSON Schemas, and a v1 → v2 strategy. The diagnosis was good.
+
+**Claude Code reviewed the draft and found these issues, which were corrected:**
+- **The fix would have broken JD.** The success response was wrapped in `{ok, data:{…}}`, but JD's client reads `response.id`. The success body is now the original shape with fields added, and a contract test guards it.
+- **The fix rejected traffic that succeeds in production.** `"size":"medium"` (sent by JD and currently accepted) got a 400, contradicting the draft's own notes. v1 now accepts and normalises the aliases, logs them as deprecated, and v2 will be strict.
+- **The schema and the code disagreed.** The code trimmed `"LK-1187 "`, but the schema's pattern rejected it. `additionalProperties: false` would also break any client sending extra fields. The tolerances are now in the schema, and a contract test checks schema ⇔ validator agreement on 16 cases.
+- **No authentication:** anyone could post as `/partners/jd`. Added API-key auth with hashed keys, a partner-match check, and a `report` mode for a non-breaking rollout.
+- **Wrong deprecation header syntax:** `Deprecation: true` is the old draft form. RFC 9745 uses a structured date (`@<epoch>`).
+- **The `Location` header was mangled** in the PDF output. The ad-hoc error envelope was replaced with RFC 9457 Problem Details (`retryable`, `requestId`).
+- **Over-engineering removed:** a mandatory `Idempotency-Key` collection alongside the ref index, and an invented `^LK-[0-9]{4,8}$` locker format that could reject real lockers.
+- Status codes chosen and justified: 422 for an unknown locker (not 404), 409 + `retryable` + `Retry-After` for an offline locker, 503 for transient Firestore errors.
+- The `gcloud` filter was rewritten with `--freshness=1d`, explicit signals for whitespace IDs and non-canonical sizes, and correct query-string escaping. Its regexes are now tested against the brief's log lines.
+
+**Claude Code then wrote** the files in `task-4/` and ran:
+- 7 unit and contract tests;
+- 7 log-filter checks;
+- 12 HTTP tests on the Firestore emulator, with every response validated against the schemas;
+- the curl suite against the real server: 15 cases plus 3 header checks.
+
+All passed. shellcheck is clean on all the scripts.
+
+**Checked against primary sources / registries:** Express 5.3.0 and Ajv 8.20.0 (npm registry). Header standards cited by RFC number: RFC 9457 (Problem Details), RFC 9745 (Deprecation), RFC 8594 (Sunset).
+
+**My own review:** _TODO_

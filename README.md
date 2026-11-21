@@ -11,7 +11,7 @@ Each task has its own folder with a README covering **what I found, what I chang
 | 1 | [`task-1/`](task-1/) | Review a scheduled-function Terraform config, rewrite it as a reusable least-privilege module, and adopt the hand-made production function without recreating it |
 | 2 | [`task-2/`](task-2/) | Fix a Scheduler → Pub/Sub → Firestore pipeline that double-books compartments, misses parcels and overlaps runs; idempotent, transactional rewrite with emulator-tested guarantees and a gcloud runbook (DLQ, OIDC, Africa/Nairobi) |
 | 3 | [`task-3/`](task-3/) | Diagnose a self-triggering 1st gen Firestore function (duplicate notifications, runaway writes), rewrite it as an idempotent 2nd gen trigger, and cut over with no gap and no duplicates; incident reproduced and fix proven on the Firebase emulators |
-| 4 | _to come_ | |
+| 4 | [`task-4/`](task-4/) | Debug a partner API from Cloud Logging (missing, duplicate and failing parcels), fix it with validation, RFC 9457 errors, auth and `(partner, ref)` idempotency, publish a v1 JSON Schema contract and a non-breaking versioning plan; tested over HTTP on the Firestore emulator plus a curl suite |
 | 5 | _to come_ | |
 | 6 | _to come_ | |
 
@@ -19,7 +19,8 @@ Each task has its own folder with a README covering **what I found, what I chang
 
 - Terraform ≥ 1.7 (used here: 1.17.2)
 - Node.js ≥ 22 (used here: 22.22.2)
-- Java ≥ 21, only for the Firebase emulator tests in Tasks 2 and 3
+- Java ≥ 21, only for the Firebase emulator tests in Tasks 2, 3 and 4
+- `curl` and `jq` for the Task 4 curl suite
 - No GCP account or credentials are needed for the checks below
 
 ## Running the checks
@@ -45,6 +46,12 @@ Each task has its own folder with a README covering **what I found, what I chang
   npm test &&               # unit tests
   npm run test:emulator &&  # Firestore + Functions emulators, both functions loaded (Java 21+)
   npm run test:repro )      # reproduces the original bug on the emulators
+
+# Task 4
+( cd task-4/api &&
+  npm ci &&
+  npm test &&               # unit + schema contract + log-filter checks
+  npm run test:emulator )   # HTTP tests + curl suite against the real server on the emulator (Java 21+)
 ```
 
 ## AI usage
