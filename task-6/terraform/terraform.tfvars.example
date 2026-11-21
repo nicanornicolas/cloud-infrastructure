@@ -1,0 +1,13 @@
+project_id         = "ktsm-prod-4471"
+env                = "prod"
+assets_bucket_name = "ktsm-locker-assets"
+office_time_zone   = "Africa/Nairobi" # the team's working hours, not the servers'
+billing_account_id = "012345-6789AB-CDEF01"
+budget_alert_email = "finops@example.com"
+
+# Step the budget down as each wave of savings lands: 7,700 now -> 4,500 after wave 1 -> 2,500 target.
+monthly_budget = 7700
+
+label_budgets = {
+  staging = { label_key = "env", label_value = "staging", amount = 300 }
+}
