@@ -104,3 +104,55 @@ All passed. shellcheck is clean on all the scripts.
 **Checked against primary sources / registries:** Express 5.3.0 and Ajv 8.20.0 (npm registry). Header standards cited by RFC number: RFC 9457 (Problem Details), RFC 9745 (Deprecation), RFC 8594 (Sunset).
 
 **My own review:** _TODO_
+
+## Task 5
+
+**Gemini (Google AI Studio):** produced the first draft:
+- the capacity table (the volumes were correct);
+- the analysis that `stats/network` breaks first;
+- the Pub/Sub → BigQuery subscription + Memorystore + reconciler architecture;
+- the code;
+- three alerts, with the backlog alert in Terraform.
+
+The architecture was a good choice.
+
+**Claude Code reviewed the draft and found these issues, which were corrected:**
+- **Race between the offline sweep and heartbeats.** The read-then-write in the sweeper could overwrite a live locker's status with offline, and the Firestore writes could land out of order. Heartbeat handling and offline marking are now atomic Lua scripts, and Firestore writes are ordered by a `statusVersion` counter (not by time). A test shows a time-based guard would get it wrong.
+- **A redelivered old heartbeat moved `lastSeen` backwards** (a false offline). Stale messages are now ignored.
+- **A failed Firestore write was lost forever:** the Pub/Sub redelivery was treated as a duplicate. A dirty marker now survives until the write succeeds, and the reconciler retries anything left dirty.
+- **A consumer outage would mark all 6,000 lockers offline.** Added a pipeline-stall guard.
+- **The 500-operation batch limit** was acknowledged only in the draft's notes, not handled in its code. Now there are per-locker writes with bounded concurrency, tested with 600 lockers at once.
+- **The heartbeat counter could be lost.** It was GETDEL'd before the Firestore write. It's now read, written, then decremented.
+- **Wrong or unsupported claims:**
+  - "~1 write/s per document" is not in Google's docs (they say it depends on the workload); the README now cites what is documented.
+  - The write cost was overstated about 2× ($1,800–2,800); at the listed $0.09 per 100k it's about $1,400/month.
+- **The backlog alert watched a subscription name that wouldn't exist,** because Eventarc generates it. It's now a regex match, and the BigQuery subscription is watched too.
+- **The lockers-offline alert had no metric absence check,** so it would stay silent if the reconciler died. An absence condition and Terraform metric descriptors were added; without the descriptors, `apply` fails before the first data point exists.
+- **Other fixes:**
+  - The draft returned 202 where the firmware expects 200.
+  - It had no device authentication (the draft's diagram claimed it). Added a per-locker HMAC token, with a report mode for rollout.
+  - It used an invented `LK-` ID format.
+  - It used a paid VPC connector instead of Direct VPC egress.
+  - Its package versions were outdated.
+
+**Claude Code then wrote** the files in `task-5/`:
+- the capacity script, whose numbers are asserted in a test;
+- the functions;
+- the Terraform for the pipeline and all three alerts;
+- the tests.
+
+It ran:
+- 7 unit tests;
+- 11 integration tests on a real Redis 7 container plus the Firestore emulator;
+- `terraform validate` and 3 plan-time tests;
+- shellcheck.
+
+All passed.
+
+**Checked against primary sources:**
+- Firestore best practices and the 500 writes/s sequential-index limit: https://docs.cloud.google.com/firestore/docs/best-practices and https://docs.cloud.google.com/firestore/native/docs/solutions/shard-timestamp
+- Firestore pricing: https://cloud.google.com/firestore/pricing
+- firebase-functions 7.4.0 `networkInterface` / `vpcEgress` options: the bundled type definitions
+- Provider and package versions: Terraform Registry, npm
+
+**My own review:** _TODO_

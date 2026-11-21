@@ -12,7 +12,7 @@ Each task has its own folder with a README covering **what I found, what I chang
 | 2 | [`task-2/`](task-2/) | Fix a Scheduler → Pub/Sub → Firestore pipeline that double-books compartments, misses parcels and overlaps runs; idempotent, transactional rewrite with emulator-tested guarantees and a gcloud runbook (DLQ, OIDC, Africa/Nairobi) |
 | 3 | [`task-3/`](task-3/) | Diagnose a self-triggering 1st gen Firestore function (duplicate notifications, runaway writes), rewrite it as an idempotent 2nd gen trigger, and cut over with no gap and no duplicates; incident reproduced and fix proven on the Firebase emulators |
 | 4 | [`task-4/`](task-4/) | Debug a partner API from Cloud Logging (missing, duplicate and failing parcels), fix it with validation, RFC 9457 errors, auth and `(partner, ref)` idempotency, publish a v1 JSON Schema contract and a non-breaking versioning plan; tested over HTTP on the Firestore emulator plus a curl suite |
-| 5 | _to come_ | |
+| 5 | [`task-5/`](task-5/) | Capacity maths for 300 → 6,000 lockers and why `stats/network` breaks first; redesign with Pub/Sub, a BigQuery subscription and Memorystore (Firestore 600 → ~24 writes/s); three alerts in Terraform; tested on real Redis + the Firestore emulator |
 | 6 | _to come_ | |
 
 ## Prerequisites
@@ -21,6 +21,7 @@ Each task has its own folder with a README covering **what I found, what I chang
 - Node.js ≥ 22 (used here: 22.22.2)
 - Java ≥ 21, only for the Firebase emulator tests in Tasks 2, 3 and 4
 - `curl` and `jq` for the Task 4 curl suite
+- podman or docker for the Task 5 integration tests (runs a Redis container)
 - No GCP account or credentials are needed for the checks below
 
 ## Running the checks
@@ -52,6 +53,14 @@ Each task has its own folder with a README covering **what I found, what I chang
   npm ci &&
   npm test &&               # unit + schema contract + log-filter checks
   npm run test:emulator )   # HTTP tests + curl suite against the real server on the emulator (Java 21+)
+
+# Task 5
+( cd task-5/functions &&
+  npm ci &&
+  npm test &&               # unit tests (capacity maths, ingest handler)
+  npm run test:integration )  # real Redis container + Firestore emulator
+( cd task-5/terraform &&
+  terraform init -backend=false && terraform validate && terraform test )
 ```
 
 ## AI usage
